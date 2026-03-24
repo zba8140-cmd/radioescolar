@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radio Escolar</title>
+ <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+  <!-- Barra superior -->
+<header class="top-bar">
+  <div class="logo-container">
+    <img src="img/logo.png" alt="Logo Radio Escolar" class="logo">
+  <h1>Radio Escolar</h1>
+   </div>
+  <span class="live">🔴 EN VIVO</span>
+</header>
+
+  <main class="player-container">
+
+    <div class="info">
+      <h2>Transmitiendo ahora</h2>
+      <p id="current-program-info">Cargando información...</p>
+      <div id="listener-count" class="listener-count">
+        👥 <span id="listeners">0</span> oyentes
+      </div>
+    </div>
+
+    <!-- Información del programa actual -->
+    <div id="program-card" class="program-card" style="display: none;">
+      <div class="program-card-content">
+        <img id="program-image" src="" alt="Programa" class="program-image">
+        <div class="program-details">
+          <h3 id="program-name">Nombre del programa</h3>
+          <p id="program-host">Conducido por: </p>
+          <p id="program-schedule"> Horario: </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección de Audio -->
+    <div id="audio-section" class="media-section active">
+      <div class="audio-player">
+        <div class="audio-player-header">
+          <span class="audio-player-icon">🎵</span>
+          <span class="audio-player-title">Radio en Vivo</span>
+          <span class="audio-player-status">EN VIVO</span>
+        </div>
+        <div class="audio-player-controls">
+          <button id="audio-play" class="audio-player-btn" title="Reproducir">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="24" fill="#2563eb"/>
+              <polygon points="19,15 36,24 19,33" fill="#fff"/>
+            </svg>
+          </button>
+          <button id="audio-pause" class="audio-player-btn" title="Pausar">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="24" fill="#2563eb"/>
+              <rect x="16" y="15" width="5" height="18" rx="2" fill="#fff"/>
+              <rect x="27" y="15" width="5" height="18" rx="2" fill="#fff"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <audio id="audio" preload="none"></audio>
+    </div>
+
+    <!-- Sección de Video -->
+    <div id="video-section" class="media-section">
+      <div style="position: relative; width: 100%; max-width: 520px;">
+        
+        <video id="video" controls style="width: 100%; border-radius: 18px; background: #000; display: none;">
+          Tu navegador no soporta video HTML5.
+        </video>
+        
+        <!-- iframe para YouTube -->
+        <iframe 
+          id="video-iframe"
+          width="100%" 
+          height="295"
+          src=""
+          frameborder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+          style="border-radius: 18px; display: none; background: #000;">
+        </iframe>
+
+        <div id="video-message" class="video-message">
+          Sin video disponible en este momento
+        </div>
+      </div>
+    </div>
+
+    <!-- alternar entre Audio y Video -->
+    <div class="media-toggle">
+      <button id="show-audio" class="active">🎧 Audio</button>
+      <button id="show-video">📹 Video</button>
+    </div>
+
+  </main>
+
+  <!-- Chat en Vivo -->
+  <section class="chat-section">
+    <div class="chat-container">
+      <div class="chat-header">
+        <h2>💬 Chat en Vivo</h2>
+      </div>
+      
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-welcome">
+          <p>¡Bienvenido al chat! Comparte tus comentarios y saludos 👋</p>
+        </div>
+      </div>
+      
+      <div class="chat-input-container">
+        <input 
+          type="text" 
+          id="chat-username" 
+          placeholder="Tu nombre" 
+          maxlength="20"
+        >
+        <input 
+          type="text" 
+          id="chat-message" 
+          placeholder="Escribe un mensaje..." 
+          maxlength="200"
+        >
+        <button id="chat-send" class="chat-send-btn">Enviar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sección de próximos programas -->
+  <section class="upcoming-programs">
+    <h2>Próximos Programas</h2>
+    <div id="programs-list" class="programs-grid">
+      <p style="color: #94a3b8;">Cargando programas...</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+  <div class="footer-content">
+    
+    <div class="footer-section">
+      <h3>Radio Escolar</h3>
+      <p>La voz de nuestra comunidad estudiantil. Transmitiendo educación, cultura y entretenimiento.</p>
+      <div class="social-links">
+        <a href="https://www.facebook.com/uttamazula" class="social-link" title="Facebook">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+        </a>
+        <a href="https://www.instagram.com/uttamazula?igsh=MXh6a3cwNjM2bjF5Yw==" class="social-link" title="Instagram">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Contáctanos -->
+    <div class="footer-section">
+      <h3> Contáctanos</h3>
+      <div class="contact-item">
+        <div>
+          <strong>Teléfono</strong>
+          <a href="tel:+526673340205">+52 667 334 0205</a>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div>
+          <strong>Ubicación</strong>
+          <p>Las Higueritas, Tamazula, Dgo.<br>Universidad Tecnológica de Tamazula</p>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div>
+          <strong>Horario</strong>
+          <p>Lunes a Viernes<br>7:10 AM - 2:10 PM</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-section">
+      <h3> Enlaces Rápidos</h3>
+      <ul class="footer-links">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="https://uttamazula.edu.mx">Institución</a></li>
+        <li><a href="admin.html">Administración</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-section">
+      <iframe 
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3617.042724568364!2d-106.93806192525808!3d24.96466097786136!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x86bd3fb479f005a3%3A0x81d46ce483c68ecc!2sUniversidad%20Tecnol%C3%B3gica%20de%20Tamazula!5e0!3m2!1ses!2sus!4v1771372744443!5m2!1ses!2sus" 
+        width="100%" 
+        height="180"
+        style="border: 0; border-radius: 12px; margin-top: 1rem;"
+        allowfullscreen="" 
+        loading="lazy" 
+        referrerpolicy="no-referrer-when-downgrade">
+      </iframe>
+       <p style="margin-top: 0.8rem; font-size: 0.9rem; color: #cbd5e1;">
+    Universidad Tecnológica de Tamazula<br>
+    Las Higueritas, Tamazula, Durango
+  </p>
+    </div>
+
+  </div>
+
+  <div class="footer-bottom">
+    <p>© 2026 Radio Escolar - Todos los derechos reservados en la Universidad Tecnológica de Tamazula.</p>
+    <p class="footer-credits">Hecho por Jose MV</p>
+  </div>
+</footer>
+  <script src="mi-firebase-config.js"></script>
+  <script src="script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+  
+</body>
+</html>

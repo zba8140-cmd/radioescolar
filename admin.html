@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Admin - Radio Escolar</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<style>
+.back-btn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: #1e293b;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: 0.3s ease;
+  z-index: 9999;
+  border: none;
+  cursor: pointer;
+}
+
+.back-btn:hover {
+  background: #334155;
+}
+
+.logout-btn {
+  left: auto;
+  right: 10px;
+  background: #ef4444;
+}
+
+.logout-btn:hover {
+  background: #dc2626;
+}
+
+:root {
+  --bg-primary:#0f172a;
+  --bg-secondary:#1e293b;
+  --accent:#6366f1;
+  --success:#10b981;
+  --danger:#ef4444;
+  --text-main:#f1f5f9;
+  --text-muted:#94a3b8;
+}
+
+body{
+  margin:0;
+  font-family:Segoe UI,sans-serif;
+  background:linear-gradient(135deg,#1e293b,#0f172a);
+  color:var(--text-main);
+}
+
+.admin-container{
+  max-width:1000px;
+  margin:auto;
+  padding:2rem;
+}
+
+.admin-header{
+  text-align:center;
+  margin-bottom:2rem;
+}
+
+.admin-header h1{
+  margin:0;
+}
+
+.form-section,.programs-list{
+  background:var(--bg-secondary);
+  padding:2rem;
+  border-radius:16px;
+  margin-bottom:2rem;
+}
+
+.form-group{
+  margin-bottom:1.2rem;
+}
+
+.form-group label{
+  display:block;
+  margin-bottom:.4rem;
+  font-weight:600;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select{
+  width:100%;
+  padding:.8rem;
+  border-radius:10px;
+  border:none;
+  background:#334155;
+  color:white;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus{
+  outline:2px solid var(--accent);
+}
+
+.btn-primary{
+  width:100%;
+  padding:1rem;
+  border:none;
+  border-radius:12px;
+  background:var(--accent);
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.program-item-admin{
+  background:#334155;
+  padding:1rem;
+  border-radius:12px;
+  margin-bottom:1rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.btn-live{
+  background:var(--success);
+  border:none;
+  padding:.5rem 1rem;
+  border-radius:8px;
+  color:white;
+  cursor:pointer;
+}
+
+.btn-live.active{
+  background:var(--danger);
+  animation:pulse 1.5s infinite;
+}
+
+.btn-delete{
+  background:var(--danger);
+  border:none;
+  padding:.5rem 1rem;
+  border-radius:8px;
+  color:white;
+  cursor:pointer;
+}
+
+@keyframes pulse{
+  0%{opacity:1;}
+  50%{opacity:.6;}
+  100%{opacity:1;}
+}
+
+/* RESPONSIVO PARA ADMIN */
+@media (max-width: 768px) {
+
+  .admin-container {
+    padding: 1rem;
+  }
+
+  .form-section,
+  .programs-list {
+    padding: 1.2rem;
+  }
+
+  .time-row {
+    flex-direction: column;
+  }
+
+  .back-btn, .logout-btn {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .program-item-admin {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .program-item-admin div:last-child {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .btn-live,
+  .btn-delete {
+    padding: 0.7rem 1rem;
+    font-size: 14px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+}
+</style>
+</head>
+
+<body>
+
+<script>
+
+if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
+  window.location.href = 'login.html';
+}
+
+function logout() {
+  if (confirm('¿Cerrar sesión?')) {
+    sessionStorage.removeItem('adminLoggedIn');
+    window.location.href = 'index.html';
+  }
+}
+</script>
+
+<div class="admin-container">
+<a href="index.html" class="back-btn"> Volver a la Web</a>
+<button onclick="logout()" class="logout-btn back-btn">Cerrar Sesión</button>
+
+<div class="admin-header">
+<h1>🎛️ Panel de Administración</h1>
+<p>Gestiona tus programas fácilmente</p>
+</div>
+
+<div class="form-section">
+<h2>➕ Agregar Programa</h2>
+
+<form id="add-program-form">
+
+<div class="form-group">
+<label>Nombre *</label>
+<input type="text" id="name" required>
+</div>
+
+<div class="form-group">
+<label>Descripción</label>
+<textarea id="description"></textarea>
+</div>
+
+<div class="form-group">
+<label>Conductor *</label>
+<input type="text" id="host" required>
+</div>
+
+<div class="form-group">
+<label>Días *</label>
+<div class="form-group">
+  <label>Fecha del programa *</label>
+  <input type="date" id="eventDate" required>
+</div>
+
+<div class="form-group">
+  <label>Día seleccionado</label>
+  <input type="text" id="formattedDate" readonly>
+</div>
+
+<div style="display:flex;gap:1.8rem;">
+<div class="form-group" style="flex:1;">
+<label>Hora inicio *</label>
+<input type="time" id="startTime" required>
+</div>
+
+<div class="form-group" style="flex:1;">
+<label>Hora fin *</label>
+<input type="time" id="endTime" required>
+</div>
+</div>
+
+<div class="form-group">
+<label>Duración automática</label>
+<input type="text" id="durationDisplay" readonly>
+</div>
+
+<div class="form-group">
+<label>URL Stream</label> 
+<input type="url" id="liveStreamUrl">
+</div>
+
+<button type="submit" class="btn-primary" id="submit-btn">
+Agregar Programa
+</button>
+
+</form>
+</div>
+
+<div class="programs-list">
+<h2>📋 Programas</h2>
+<div id="programs-list-container"></div>
+</div>
+
+</div>
+
+<script src="mi-firebase-config.js"></script>
+
+<script>
+const form=document.getElementById('add-program-form');
+const programsListContainer=document.getElementById('programs-list-container');
+const submitBtn=document.getElementById('submit-btn');
+
+function calculateDuration(){
+const start=document.getElementById("startTime").value;
+const end=document.getElementById("endTime").value;
+if(!start||!end)return;
+
+const s=new Date(`1970-01-01T${start}:00`);
+const e=new Date(`1970-01-01T${end}:00`);
+
+let diff=(e-s)/60000;
+if(diff<0)diff+=1440;
+
+document.getElementById("durationDisplay").value=diff+" minutos";
+}
+document.getElementById("startTime").addEventListener("change",calculateDuration);
+document.getElementById("endTime").addEventListener("change",calculateDuration);
+
+document.getElementById("eventDate").addEventListener("change", function() {
+
+  const dateValue = this.value;
+  if (!dateValue) return;
+
+  const date = new Date(dateValue + "T00:00:00");
+
+  const dias = [
+    "Domingo","Lunes","Martes","Miércoles",
+    "Jueves","Viernes","Sábado"
+  ];
+
+  const meses = [
+    "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+    "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
+  ];
+
+  const diaSemana = dias[date.getDay()];
+  const numero = date.getDate();
+  const mes = meses[date.getMonth()];
+  const año = date.getFullYear();
+
+  document.getElementById("formattedDate").value =
+    `${diaSemana} ${numero} de ${mes} ${año}`;
+});
+form.addEventListener('submit',async(e)=>{
+e.preventDefault();
+
+submitBtn.disabled=true;
+submitBtn.textContent="Guardando...";
+
+const name=document.getElementById('name').value;
+const description=document.getElementById('description').value||"Sin descripción";
+const host=document.getElementById('host').value;
+const eventDate = document.getElementById('eventDate').value;
+const startTime=document.getElementById('startTime').value;
+const endTime=document.getElementById('endTime').value;
+const streamUrl=document.getElementById('liveStreamUrl').value||"";
+
+const s=new Date(`1970-01-01T${startTime}:00`);
+const e2=new Date(`1970-01-01T${endTime}:00`);
+let duration=(e2-s)/60000;
+if(duration<0)duration+=1440;
+
+const scheduleText = `${eventDate} ${startTime} - ${endTime}`;
+await db.collection('programs').add({
+eventDate,
+autoLive: true,
+name,
+description,
+host,
+schedule:scheduleText,
+duration,
+startTime,
+endTime,
+liveStreamUrl:streamUrl,
+isLive:false,
+createdAt:firebase.firestore.FieldValue.serverTimestamp()
+});
+
+form.reset();
+document.getElementById("durationDisplay").value="";
+submitBtn.disabled=false;
+submitBtn.textContent="Agregar Programa";
+loadPrograms();
+});
+
+async function loadPrograms(){
+const snapshot=await db.collection('programs').orderBy('createdAt','desc').get();
+programsListContainer.innerHTML="";
+snapshot.forEach(doc=>{
+const p=doc.data();
+const div=document.createElement("div");
+div.className="program-item-admin";
+
+const liveBtn=p.isLive?
+`<button class="btn-live active" onclick="setLive('${doc.id}',false)">Detener</button>`:
+`<button class="btn-live" onclick="setLive('${doc.id}',true)">EN VIVO</button>`;
+
+div.innerHTML=`
+<div>
+<strong>${p.name}</strong><br>
+${p.host}<br>
+${p.schedule} (${p.duration} min)
+</div>
+<div>
+${liveBtn}
+<button class="btn-delete" onclick="deleteProgram('${doc.id}')">Borrar</button>
+</div>
+`;
+
+programsListContainer.appendChild(div);
+});
+}
+
+async function deleteProgram(id){
+if(!confirm("¿Borrar programa?"))return;
+await db.collection('programs').doc(id).delete();
+loadPrograms();
+}
+
+async function setLive(programId, isLive){
+
+  const programRef = db.collection('programs').doc(programId);
+
+  console.log(' setLive llamado:', programId, isLive);
+
+  const programDoc = await programRef.get();
+  const programData = programDoc.data();
+
+  let streamUrl = programData.liveStreamUrl || '';
+  let streamType = 'audio';
+
+  // Convertir automáticamente embed de YouTube
+  if (streamUrl.includes('youtube.com') || streamUrl.includes('youtu.be')) {
+
+    let videoId = '';
+
+    if (streamUrl.includes('watch?v=')) {
+      videoId = streamUrl.split('watch?v=')[1].split('&')[0];
+    } 
+    else if (streamUrl.includes('/live/')) {
+      videoId = streamUrl.split('/live/')[1].split('?')[0];
+    } 
+    else if (streamUrl.includes('youtu.be/')) {
+      videoId = streamUrl.split('youtu.be/')[1].split('?')[0];
+    }
+
+    if (videoId) {
+      streamUrl = `https://www.youtube.com/embed/${videoId}`;
+      streamType = 'video';
+    }
+  }
+
+  if (isLive) {
+
+    // Quitar live a todos
+    const allPrograms = await db.collection('programs').get();
+    const batch = db.batch();
+    allPrograms.forEach(doc => {
+      batch.update(doc.ref, { isLive: false });
+    });
+    await batch.commit();
+
+    await programRef.update({ isLive: true });
+
+    console.log(' Guardando en liveStatus:', {
+    isLive: true,
+    currentProgram: programId,
+    streamUrl: streamUrl,
+    streamType: streamType
+  });
+
+    await db.collection('liveStatus').doc('current').set({
+  isLive: true,
+  currentProgram: programId,
+  streamUrl: streamUrl,
+  streamType: streamType,
+  startedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  } else {
+  await programRef.update({ isLive: false });
+  await db.collection('liveStatus').doc('current').update({
+  isLive: false,
+  currentProgram: null
+});
+  }
+  loadPrograms();
+}
+
+window.addEventListener("DOMContentLoaded",loadPrograms);
+</script>
+</body>
+</html>
